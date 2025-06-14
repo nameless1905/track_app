@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Бэкенд (Django)
+  backend:
+    build: ./myserver
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 4 --threads 2 project.wsgi:application"
+    volumes:
+      - ./myserver:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    environment:
+      - DJANGO_SETTINGS_MODULE=myserver.settings
+
+
+    networks:
+      - app_network
+
+  # Фронтенд (Vue.js)
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - VITE_APP_API_URL=/api
+      - VITE_APP_WS_URL=/ws
+
+    networks:
+      - app_network
+
+
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  app_network:
+    driver: bridge
